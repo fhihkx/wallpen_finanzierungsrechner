@@ -28,8 +28,8 @@ export function createOfferPdf({customer, calculation, date = new Date()}) {
     doc.setFont('Barlow',bold?'bold':'normal'); doc.setFontSize(size); doc.setTextColor(...color);
     doc.text(String(value),x,y,options);
   };
-  const paragraph=(value,x,y,width,size=10)=>{
-    doc.setFont('Barlow','normal'); doc.setFontSize(size);
+  const paragraph=(value,x,y,width,size=10,bold=false)=>{
+    doc.setFont('Barlow',bold?'bold':'normal'); doc.setFontSize(size);
     const lines=doc.splitTextToSize(value,width); doc.setTextColor(...ink); doc.text(lines,x,y);
     return y+lines.length*size*.42;
   };
@@ -73,10 +73,22 @@ export function createOfferPdf({customer, calculation, date = new Date()}) {
     text(rows[i][0],24,y,10,highlight);text(rows[i][1],186,y,10,true,ink,{align:'right'});y+=9.5;
   }
   y+=7;
-  if(y>233){doc.addPage();doc.setFillColor(...accent);doc.rect(0,0,210,3,'F');y=25;}
-  y=paragraph(`Berechnung: Netto-Anschaffungspreis × ${factorLabel} ÷ 100 = monatliche Nettorate.`,20,y,170,8)+3;
-  y=paragraph('Alle Beträge verstehen sich netto, zuzüglich der gesetzlichen Mehrwertsteuer. Dieses Angebot ist unverbindlich und steht unter dem Vorbehalt einer positiven Bonitätsprüfung. ' + (mietkauf ? 'Zahlungsplan, Restbetrag und Eigentumsübergang richten sich nach dem Mietkaufvertrag.' : 'Der kalkulatorische Restwert ist keine garantierte Kaufoption.'),20,y,170,8)+5;
-  text('Mit freundlichen Grüßen',20,y,9);y+=5;text(PDF_COMPANY.name,20,y,9,true);
+  const closingParagraphs=[
+    ['Die oben genannten Preise verstehen sich netto, zuzüglich der gesetzlichen Mehrwertsteuer.',false],
+    ...(mietkauf ? [['Hinweis: Die gesetzl. Mehrwertsteuer fällt vorab auf die Summe aller Zahlungen an.',true]] : []),
+    ['Auf Wunsch fragen wir dieses Finanzierungsangebot gerne verbindlich für Sie über unseren Finanzierungspartner an.',false],
+    ['Wir freuen uns, für Sie tätig werden zu können und sichern Ihnen bereits jetzt eine faire, schnelle und unbürokratische Abwicklung zu.',false],
+    ['Mit freundlichen Grüßen, Ihr wallPen Team',false],
+  ];
+  const closingSize=9;
+  const closingHeight=closingParagraphs.reduce((height,[value,bold])=>{
+    doc.setFont('Barlow',bold?'bold':'normal');doc.setFontSize(closingSize);
+    return height+doc.splitTextToSize(value,170).length*closingSize*.42+3;
+  },0);
+  if(y+closingHeight>263){doc.addPage();doc.setFillColor(...accent);doc.rect(0,0,210,3,'F');y=25;}
+  for(const [value,bold] of closingParagraphs) {
+    y=paragraph(value,20,y,170,closingSize,bold)+3;
+  }
   const pages=doc.getNumberOfPages();
   for(let page=1;page<=pages;page++){
     doc.setPage(page);
